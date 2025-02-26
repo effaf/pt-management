@@ -1,0 +1,4 @@
+flask
+python-dotenv
+requests
+# Add other Python dependencies as needed
