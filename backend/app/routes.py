@@ -2,7 +2,11 @@ from flask import Blueprint, request, jsonify
 from .models import db, Servicer, Client, Service
 from .utils import calculate_commission
 
-api = Blueprint('api', __name__)
+api = Blueprint('api', __name__, url_prefix='/api')
+
+@api.route('/health')
+def health_check():
+    return jsonify({"status": "healthy"})
 
 @api.route('/servicers', methods=['GET', 'POST'])
 def servicers():
@@ -12,7 +16,7 @@ def servicers():
             name=data['name'],
             contact_info=data['contact_info'],
             specialties=data['specialties'],
-            commission_rate=data['commission_rate']
+            commission_rate=float(data['commission_rate'])
         )
         db.session.add(new_servicer)
         db.session.commit()
@@ -27,18 +31,44 @@ def servicers():
             "commission_rate": s.commission_rate
         } for s in servicers])
 
+@api.route('/servicers/<int:servicer_id>', methods=['PUT', 'DELETE'])
+def servicer_operations(servicer_id):
+    servicer = Servicer.query.get_or_404(servicer_id)
+    
+    if request.method == 'DELETE':
+        try:
+            db.session.delete(servicer)
+            db.session.commit()
+            return jsonify({"message": "Servicer deleted successfully"}), 200
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"error": str(e)}), 400
+        
+    elif request.method == 'PUT':
+        data = request.json
+        servicer.name = data['name']
+        servicer.contact_info = data['contact_info']
+        servicer.specialties = data['specialties']
+        servicer.commission_rate = float(data['commission_rate'])
+        db.session.commit()
+        return jsonify({"message": "Servicer updated successfully"}), 200
+
 @api.route('/clients', methods=['GET', 'POST'])
 def clients():
     if request.method == 'POST':
-        data = request.json
-        new_client = Client(
-            name=data['name'],
-            contact_info=data['contact_info'],
-            treatment=data['treatment']
-        )
-        db.session.add(new_client)
-        db.session.commit()
-        return jsonify({"message": "Client created successfully"}), 201
+        try:
+            data = request.json
+            new_client = Client(
+                name=data['name'],
+                contact_info=data['contact_info'],
+                treatment=data.get('treatment', '')
+            )
+            db.session.add(new_client)
+            db.session.commit()
+            return jsonify({"message": "Client created successfully"}), 201
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"error": str(e)}), 400
     else:
         clients = Client.query.all()
         return jsonify([{
@@ -47,6 +77,31 @@ def clients():
             "contact_info": c.contact_info,
             "treatment": c.treatment
         } for c in clients])
+
+@api.route('/clients/<int:client_id>', methods=['PUT', 'DELETE'])
+def client_operations(client_id):
+    client = Client.query.get_or_404(client_id)
+    
+    if request.method == 'DELETE':
+        try:
+            db.session.delete(client)
+            db.session.commit()
+            return jsonify({"message": "Client deleted successfully"}), 200
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"error": str(e)}), 400
+        
+    elif request.method == 'PUT':
+        try:
+            data = request.json
+            client.name = data['name']
+            client.contact_info = data['contact_info']
+            client.treatment = data.get('treatment', '')
+            db.session.commit()
+            return jsonify({"message": "Client updated successfully"}), 200
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"error": str(e)}), 400
 
 @api.route('/services', methods=['GET', 'POST'])
 def services():

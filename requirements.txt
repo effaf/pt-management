@@ -1,4 +1,8 @@
-flask
-python-dotenv
-requests
-# Add other Python dependencies as needed
+Flask==2.1.0
+Flask-SQLAlchemy==2.5.1
+Flask-CORS==3.0.10
+SQLAlchemy==1.4.31
+python-dotenv==1.0.0
+requests==2.31.0
+pytest==7.4.3
+gunicorn==21.2.0
