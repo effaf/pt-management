@@ -19,7 +19,7 @@ class Service(db.Model):
     date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     client_id = db.Column(db.Integer, db.ForeignKey('client.id'), nullable=False)
     servicer_id = db.Column(db.Integer, db.ForeignKey('servicer.id'), nullable=False)
-    type = db.Column(db.String(100), nullable=False)
+    service_type = db.Column(db.String(100), nullable=False)
     duration = db.Column(db.Integer)  # in minutes
     fee = db.Column(db.Float, nullable=False)
     commission = db.Column(db.Float, nullable=False)

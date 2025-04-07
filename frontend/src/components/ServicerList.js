@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import config from '../config';
 
 const ServicerList = () => {
@@ -12,6 +12,12 @@ const ServicerList = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [editingId, setEditingId] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortConfig, setSortConfig] = useState({ 
+    key: 'name', 
+    direction: 'ascending' 
+  });
+  const [services, setServices] = useState([]);
 
   useEffect(() => {
     fetchServicers();
@@ -30,6 +36,50 @@ const ServicerList = () => {
       setTimeout(() => setError(''), 5000);
     }
   };
+
+  const fetchServicerServices = async (servicerId) => {
+    try {
+      const response = await fetch(`${config.API_BASE_URL}/services?servicer_id=${servicerId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch servicer services');
+      }
+      const data = await response.json();
+      setServices(data);
+    } catch (error) {
+      setError('Error fetching servicer services: ' + error.message);
+      setTimeout(() => setError(''), 5000);
+    }
+  };
+
+  const handleSort = (key) => {
+    let direction = 'ascending';
+    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const sortedServicers = useMemo(() => {
+    if (!servicers.length) return [];
+
+    return [...servicers].sort((a, b) => {
+      if (a[sortConfig.key] < b[sortConfig.key]) {
+        return sortConfig.direction === 'ascending' ? -1 : 1;
+      }
+      if (a[sortConfig.key] > b[sortConfig.key]) {
+        return sortConfig.direction === 'ascending' ? 1 : -1;
+      }
+      return 0;
+    });
+  }, [servicers, sortConfig]);
+
+  const filteredServicers = useMemo(() => {
+    return sortedServicers.filter(servicer => 
+      servicer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      servicer.specialties.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      servicer.contact_info.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [sortedServicers, searchTerm]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -194,18 +244,43 @@ const ServicerList = () => {
         </div>
       </form>
 
+      <div className="servicer-controls">
+        <input 
+          type="text" 
+          placeholder="Search servicers..." 
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+      </div>
+
       <table>
         <thead>
           <tr>
-            <th>Name</th>
-            <th>Contact Info</th>
-            <th>Specialties</th>
-            <th>Commission Rate</th>
+            <th onClick={() => handleSort('name')}>
+              Name 
+              {sortConfig.key === 'name' && 
+                (sortConfig.direction === 'ascending' ? ' ▲' : ' ▼')}
+            </th>
+            <th onClick={() => handleSort('contact_info')}>
+              Contact Info
+              {sortConfig.key === 'contact_info' && 
+                (sortConfig.direction === 'ascending' ? ' ▲' : ' ▼')}
+            </th>
+            <th onClick={() => handleSort('specialties')}>
+              Specialties
+              {sortConfig.key === 'specialties' && 
+                (sortConfig.direction === 'ascending' ? ' ▲' : ' ▼')}
+            </th>
+            <th onClick={() => handleSort('commission_rate')}>
+              Commission Rate
+              {sortConfig.key === 'commission_rate' && 
+                (sortConfig.direction === 'ascending' ? ' ▲' : ' ▼')}
+            </th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
-          {servicers.map((servicer) => (
+          {filteredServicers.map((servicer) => (
             <tr key={servicer.id}>
               <td>{servicer.name}</td>
               <td>{servicer.contact_info}</td>
@@ -214,11 +289,44 @@ const ServicerList = () => {
               <td>
                 <button onClick={() => handleEdit(servicer)}>Edit</button>
                 <button onClick={() => handleDelete(servicer.id)}>Delete</button>
+                <button onClick={() => fetchServicerServices(servicer.id)}>
+                  View Services
+                </button>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+
+      {services.length > 0 && (
+        <div className="servicer-services">
+          <h3>Services Provided</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Client</th>
+                <th>Service Type</th>
+                <th>Duration</th>
+                <th>Fee</th>
+                <th>Commission</th>
+              </tr>
+            </thead>
+            <tbody>
+              {services.map((service) => (
+                <tr key={service.id}>
+                  <td>{new Date(service.date).toLocaleDateString()}</td>
+                  <td>{service.client.name}</td>
+                  <td>{service.service_type}</td>
+                  <td>{service.duration} mins</td>
+                  <td>${service.fee.toFixed(2)}</td>
+                  <td>${service.commission.toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 };

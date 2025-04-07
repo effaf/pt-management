@@ -74,6 +74,17 @@ This is a 3-tier service management application built with React, Flask, and SQL
 - Manage Servicers, Clients, and Services
 - Calculate and report on commissions earned by Servicers
 
+## Screenshots
+
+### Dashboard
+![Dashboard](/docs/screenshots/dashboard.png)
+
+### Servicers
+![Servicers List](/docs/screenshots/servicers.png)
+
+### Clients
+![Clients Page](/docs/screenshots/clients.png)
+
 ## API Endpoints
 
 - GET /servicers - List all servicers

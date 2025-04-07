@@ -106,33 +106,74 @@ def client_operations(client_id):
 @api.route('/services', methods=['GET', 'POST'])
 def services():
     if request.method == 'POST':
-        data = request.json
-        commission = calculate_commission(data['fee'], data['servicer_id'])
-        new_service = Service(
-            client_id=data['client_id'],
-            servicer_id=data['servicer_id'],
-            type=data['type'],
-            duration=data['duration'],
-            fee=data['fee'],
-            commission=commission,
-            notes=data.get('notes', '')
-        )
-        db.session.add(new_service)
-        db.session.commit()
-        return jsonify({"message": "Service created successfully"}), 201
+        try:
+            data = request.json
+            commission = calculate_commission(data['fee'], data['servicer_id'])
+            new_service = Service(
+                client_id=data['client_id'],
+                servicer_id=data['servicer_id'],
+                service_type=data['service_type'],
+                duration=data['duration'],
+                fee=data['fee'],
+                commission=commission,
+                notes=data.get('notes', '')
+            )
+            db.session.add(new_service)
+            db.session.commit()
+            return jsonify({"message": "Service created successfully"}), 201
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"error": str(e)}), 400
     else:
         services = Service.query.all()
         return jsonify([{
             "id": s.id,
-            "date": s.date,
-            "client_id": s.client_id,
-            "servicer_id": s.servicer_id,
-            "type": s.type,
+            "date": s.date.isoformat(),
+            "client": {
+                "id": s.client.id,
+                "name": s.client.name,
+                "contact_info": s.client.contact_info
+            },
+            "servicer": {
+                "id": s.servicer.id,
+                "name": s.servicer.name,
+                "contact_info": s.servicer.contact_info
+            },
+            "service_type": s.service_type,
             "duration": s.duration,
             "fee": s.fee,
             "commission": s.commission,
             "notes": s.notes
         } for s in services])
+
+@api.route('/services/<int:service_id>', methods=['PUT', 'DELETE'])
+def service_operations(service_id):
+    service = Service.query.get_or_404(service_id)
+    
+    if request.method == 'DELETE':
+        try:
+            db.session.delete(service)
+            db.session.commit()
+            return jsonify({"message": "Service deleted successfully"}), 200
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"error": str(e)}), 400
+        
+    elif request.method == 'PUT':
+        try:
+            data = request.json
+            service.client_id = data['client_id']
+            service.servicer_id = data['servicer_id']
+            service.service_type = data['service_type']
+            service.duration = data['duration']
+            service.fee = data['fee']
+            service.commission = calculate_commission(data['fee'], data['servicer_id'])
+            service.notes = data.get('notes', '')
+            db.session.commit()
+            return jsonify({"message": "Service updated successfully"}), 200
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"error": str(e)}), 400
 
 @api.route('/commissions', methods=['GET'])
 def commissions():
